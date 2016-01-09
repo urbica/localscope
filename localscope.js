@@ -22,7 +22,7 @@ var labels = {
   en_US: {
     query: 'cafe', m: 'm', map: 'Map', satellite: 'Satellite', found: 'Found', not_found: 'Nothing found', page: 'Page on Yandex.Maps', url: 'http://maps.yandex.com',
     header: 'LocalScope',
-    text: 'This is a tiny tool witch helps to investigate the places inside the walking radius. It is also displaying the working hours of the found set of the places. Try search any places category and play with radial distance slider.<br/>The tool is using the local search from Yandex.Maps API.',
+    text: 'This tool helps to investigate the places inside the walking radius. LocalScope also displaying the working hours of the found set of the places. Try search any places category and play with radial distance slider.<br/>The tool is using the local search API Yandex.Maps',
     go: 'Go',
     created: 'Created by'
   },
