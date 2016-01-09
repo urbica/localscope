@@ -1,23 +1,68 @@
-var labels = {
-  en_US: { query: 'cafe', m: 'm', map: 'Map', satellite: 'Satellite', found: 'Found', not_found: 'Nothing found', page: 'Page on Yandex.Maps', url: 'http://maps.yandex.com' },
-  ru_RU: { query: 'кафе', m: 'м', map: 'Карта', satellite: 'Спутник', found: 'Найдено', not_found: 'Ничего не найдено', page: 'Страница на Яндекс.Картах', url: 'http://maps.yandex.ru' }
+//parsing params
+var Requests = {
+    QueryString : function(item){
+        var svalue = location.search.match(new RegExp("[\?\&]" + item + "=([^\&]*)(\&?)","i"));
+        return svalue ? svalue[1] : svalue;
+    }
 };
 
-var l = 'en_US'; //default lang
+//detecting language
+function detectLang() {
+    var tlang = "en_US";
+    if(Requests.QueryString("l") === "ru" || Requests.QueryString("l") === "ru/") {
+        tlang = "ru_RU";
+    } else {
+        var dlang = navigator.language || navigator.userLanguage;
+        if(dlang=="ru" || dlang=="ru-RU") tlang = "ru_RU";
+    }
+    return tlang;
+}
 
+var labels = {
+  en_US: {
+    query: 'cafe', m: 'm', map: 'Map', satellite: 'Satellite', found: 'Found', not_found: 'Nothing found', page: 'Page on Yandex.Maps', url: 'http://maps.yandex.com',
+    header: 'LocalScope',
+    text: 'This is a tiny tool witch helps to investigate the places inside the walking radius. It is also displaying the working hours of the found set of the places. Try search any places category and play with radial distance slider.<br/>The tool is using the local search from Yandex.Maps API.',
+    go: 'Go',
+    created: 'Created by'
+  },
+  ru_RU: { query: 'кафе', m: 'м', map: 'Карта', satellite: 'Спутник', found: 'Найдено', not_found: 'Ничего не найдено', page: 'Страница на Яндекс.Картах', url: 'http://maps.yandex.ru',
+  header: 'ЛокалСкоп',
+  text: 'ЛокалСкоп показывает найденные организации по вашему запросу в радиусе пешей доступности, а также строит график в какие дни и часы наибольшее число организаций работает. Попробуйте поискать места по вашему запросу и поиграйтесь со слайдером пешего радиуса. <br/>ЛокалСкоп использует данные из Яндекс.Карт',
+  go: 'Начать',
+  created: 'Создан в студии'
+ }
+};
+
+//var l = 'en_US'; //default lang
+//detecting lang
+var l = detectLang();
+
+var step = (window.innerWidth<700) ? 10 : 15;
+
+d3.select("#about-screen").on('click', function () {
+  d3.select("#about-screen").style("display", "none");
+});
+d3.select("#about-header").text(labels[l].header);
+d3.select("#about-text").html(labels[l].text);
+d3.select("#about-go").text(labels[l].go);
+d3.select("#about-created").text(labels[l].created);
+d3.select("#info").on('click', function() {
+  d3.select("#about-screen").style("display", "block");
+});
 
 
 ymaps.ready(function() {
 
 var x = d3.scale.linear()
     .domain([0,24])
-    .range([0,360]);
+    .range([0,24*step]);
 
 var xAxis = d3.svg.axis()
       .scale(x)
       .orient("bottom");
 
-var hoursChart = d3.select("#graph").append("svg").attr("width", 400).attr("height", 90);
+var hoursChart = d3.select("#graph").append("svg").attr("width", (24*step+35)).attr("height", 90);
 
 var mapType = d3.select("#mapType").text(labels[l].map).on('click', function() { reColor('light'); }),
     satType = d3.select("#satType").text(labels[l].satellite).on('click', function() { reColor('dark'); });
@@ -68,7 +113,7 @@ var params = {
 	//creating the map
   var map = new ymaps.Map('map', {
 	   center: start,
-	    zoom: 14,
+	    zoom: 13,
 	    controls: [] //['typeSelector']
   });
 
@@ -82,8 +127,7 @@ var params = {
 
 
   var companyInfoTemplate = ymaps.templateLayoutFactory.createClass(
-             '<h3>{{ properties.name }}</h3>' +
-             '~ {{ properties.distance }} м </br>' +
+             '<h3>{{ properties.name }} ~ {{ properties.distance }}&nbsp;' + labels[l].m + '</h3>' +
              '<a href='+labels[l].url+'/org/{{ properties.CompanyMetaData.id }} target=_blank>' + labels[l].page + '</a>');
 
   var dataLayer = new ymaps.ObjectManager({
@@ -104,12 +148,12 @@ var params = {
 //  dataLayer.objects.options.set('preset', 'islands#greenDotIcon');
   map.geoObjects.add(dataLayer);
 
-  function getPosition(dist) {
-    return (turf.destination(turf.point(start), dist/1000, bearing, units)).geometry.coordinates;
+  function getPosition(st,dist) {
+    return (turf.destination(turf.point(st), dist/1000, bearing, units)).geometry.coordinates;
   }
 
-  function getPositionX(dist) {
-    return (turf.destination(turf.point(start), dist/1000, bearing, units)).geometry.coordinates[0];
+  function getPositionX(st,dist) {
+    return (turf.destination(turf.point(st), dist/1000, bearing, units)).geometry.coordinates[0];
   }
 
   function updatePointer() {
@@ -119,20 +163,20 @@ var params = {
 
   function checkGeometry() {
     var x = dragGeometry[0];
-    if(dragGeometry[0] <= getPositionX(minDistance)) x = getPositionX(minDistance);
-    if(dragGeometry[0] >= getPositionX(maxDistance)) x = getPositionX(maxDistance);
+    if(dragGeometry[0] <= getPositionX(start,minDistance)) x = getPositionX(start,minDistance);
+    if(dragGeometry[0] >= getPositionX(start,maxDistance)) x = getPositionX(start,maxDistance);
     return [x,start[1]];
   }
 
-  var dragGeometry = getPosition(distance);
+  var dragGeometry = getPosition(start,distance);
 
   var  pointerLayouts = [];
 
   pointerLayouts['light'] = ymaps.templateLayoutFactory.createClass('<span id="pointer" class="pointer-light"> {{properties.distance }}&nbsp;'+ labels[l].m +'</span>');
   pointerLayouts['dark'] = ymaps.templateLayoutFactory.createClass('<span id="pointer" class="pointer-dark"> {{properties.distance }}&nbsp;'+ labels[l].m +'</span>');
 
-  var  pointer = new ymaps.Placemark(getPosition(distance), {
-        distance: 100
+  var  pointer = new ymaps.Placemark(getPosition(start,distance), {
+        distance: distance
         }, {
           iconLayout: pointerLayouts['light'],
           iconShape: {
@@ -150,6 +194,26 @@ var params = {
   });
   map.geoObjects.add(pointer);
 
+  var center = new ymaps.Placemark(start, {
+        }, {
+          hasBalloon: false,
+          iconLayout: 'default#image',
+          iconImageHref: 'center.svg',
+          iconImageSize: [25, 25],
+          iconImageOffset: [-13, -12],
+          draggable: true
+        });
+      map.geoObjects.add(center);
+
+  center.events.add("drag", function(e) {
+    pointer.geometry.setCoordinates(getPosition(center.geometry.getCoordinates(),distance));
+    circle.geometry.setCoordinates(center.geometry.getCoordinates());
+  });
+
+  center.events.add("dragend", function(e) {
+    start = center.geometry.getCoordinates();
+    requestData();
+  });
 
   var input = d3.select("#input").property("value", labels[l].query);
   var indicator = d3.select("#indicator");
@@ -183,13 +247,13 @@ var params = {
   function requestData() {
 
     //setting new center to search
-    start = map.getCenter();
+    //start = map.getCenter();
     params.ll = start.join(',');
 
     //update pointers position
     circle.geometry.setCoordinates(start,distance);
 //    circle.geometry.setRadius(distance);
-    pointer.geometry.setCoordinates(getPosition(distance));
+    pointer.geometry.setCoordinates(getPosition(start,distance));
 
     dataLayer.removeAll();
 
@@ -353,9 +417,9 @@ var params = {
       if(hourStat > 0)
         blocks
           .append("rect")
-          .attr("width", 14.99)
+          .attr("width", (step-0.01))
           .attr("height", 9)
-          .attr("transform", function(d, i) { return "translate(" + (ih*15) + "," + (id*10) + ")"; })
+          .attr("transform", function(d, i) { return "translate(" + (ih*step) + "," + (id*10) + ")"; })
           .style("opacity", hourStat/total)
           .style("fill", "#333")
           .on("mouseover", function(d) {
@@ -374,6 +438,7 @@ var params = {
 
 
   //start
+  reColor('dark');
   requestData();
 
 
