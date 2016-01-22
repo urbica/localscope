@@ -20,13 +20,13 @@ function detectLang() {
 
 var labels = {
   en_US: {
-    query: 'cafe', m: 'm', map: 'Map', satellite: 'Satellite', found: 'Found', not_found: 'Nothing found', page: 'Page on Yandex.Maps', url: 'http://maps.yandex.com',
+    query: 'cafe', m: 'm', min: 'min', map: 'Map', satellite: 'Satellite', found: 'Found', not_found: 'Nothing found', page: 'Page on Yandex.Maps', url: 'http://maps.yandex.com',
     header: 'LocalScope',
     text: 'This tool helps to investigate the places inside the walking radius. LocalScope also displaying the working hours of the found set of the places. Try search any places category and play with radial distance slider.<br/>The tool is using the local search API Yandex.Maps',
     go: 'Go',
     created: 'Created by'
   },
-  ru_RU: { query: 'кафе', m: 'м', map: 'Карта', satellite: 'Спутник', found: 'Найдено', not_found: 'Ничего не найдено', page: 'Страница на Яндекс.Картах', url: 'http://maps.yandex.ru',
+  ru_RU: { query: 'кафе', m: 'м', min: 'мин.',  map: 'Карта', satellite: 'Спутник', found: 'Найдено', not_found: 'Ничего не найдено', page: 'Страница на Яндекс.Картах', url: 'http://maps.yandex.ru',
   header: 'ЛокалСкоп',
   text: 'ЛокалСкоп показывает найденные организации по вашему запросу в радиусе пешей доступности, а также строит график в какие дни и часы наибольшее число организаций работает. Попробуйте поискать места по вашему запросу и поиграйтесь со слайдером пешего радиуса. <br/>ЛокалСкоп использует данные из Яндекс.Карт',
   go: 'Начать',
@@ -104,6 +104,7 @@ var params = {
 
 //poniter params
   var distance = 1350, //in meters
+      minutes = 15,
       minDistance = 90,
       maxDistance = 2700,
       bearing = 90,
@@ -127,7 +128,7 @@ var params = {
 
 
   var companyInfoTemplate = ymaps.templateLayoutFactory.createClass(
-             '<h3>{{ properties.name }} ~ {{ properties.distance }}&nbsp;' + labels[l].m + '</h3>' +
+             '<h3>{{ properties.name }} ~ {{ properties.minutes }}&nbsp;' + labels[l].min + '&nbsp;({{ properties.distance }}&nbsp;' + labels[l].m + ')</h3>' +
              '<a href='+labels[l].url+'/org/{{ properties.CompanyMetaData.id }} target=_blank>' + labels[l].page + '</a>');
 
   var dataLayer = new ymaps.ObjectManager({
@@ -158,7 +159,8 @@ var params = {
 
   function updatePointer() {
     circle.geometry.setRadius(distance);
-    pointer.properties.set('distance', Math.round(distance));
+    minutes = Math.round(distance/90);
+    pointer.properties.set('minutes', Math.round(minutes));
   }
 
   function checkGeometry() {
@@ -172,11 +174,11 @@ var params = {
 
   var  pointerLayouts = [];
 
-  pointerLayouts['light'] = ymaps.templateLayoutFactory.createClass('<span id="pointer" class="pointer-light"> {{properties.distance }}&nbsp;'+ labels[l].m +'</span>');
-  pointerLayouts['dark'] = ymaps.templateLayoutFactory.createClass('<span id="pointer" class="pointer-dark"> {{properties.distance }}&nbsp;'+ labels[l].m +'</span>');
+  pointerLayouts['light'] = ymaps.templateLayoutFactory.createClass('<span id="pointer" class="pointer-light"> {{properties.minutes }}&nbsp;'+ labels[l].min +'</span>');
+  pointerLayouts['dark'] = ymaps.templateLayoutFactory.createClass('<span id="pointer" class="pointer-dark"> {{properties.minutes }}&nbsp;'+ labels[l].min +'</span>');
 
   var  pointer = new ymaps.Placemark(getPosition(start,distance), {
-        distance: distance
+        distance: minutes
         }, {
           iconLayout: pointerLayouts['light'],
           iconShape: {
@@ -271,6 +273,7 @@ var params = {
           response.data.features.forEach(function(feature,i) {
             jQuery.extend(feature.properties, feature.properties.CompanyMetaData);
             feature.properties['distance'] = Math.round(turf.distance(feature, turf.point(start), "kilometers")*1000);
+            feature.properties['minutes'] = Math.round(feature.properties['distance']/90);
             feature['id'] = i;
           });
           jsonData = response.data;
