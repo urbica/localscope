@@ -2,7 +2,7 @@
 
   * {
     font-family: 'Open Sans', sans-serif;
-    font-weight: 400; 
+    font-weight: 400;
     font-size: 13px;
   }
 
@@ -45,7 +45,7 @@
     line-height: 22px;
     display: inline-block;
     font-size: 15px;
-    max-width: 300px;
+    max-width: 340px;
     padding: 50px;
   }
 
@@ -65,7 +65,7 @@
   }
 
   #about-credits {
-    margin-top: 50px;
+    margin-top: 30px;
     opacity: 0.7;
   }
 
